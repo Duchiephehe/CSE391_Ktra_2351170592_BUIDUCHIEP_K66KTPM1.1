@@ -1,74 +1,107 @@
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-const formatPrice = (v) => v.toLocaleString('vi-VN') + '₫';
-
-function renderTable(products) {
-    const tbody = document.querySelector('table tbody');
-    tbody.innerHTML = '';
-    products.forEach((p, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-			<td>${idx + 1}</td>
-			<td>${p.name}</td>
-			<td>${formatPrice(p.price)}</td>
-			<td>${p.quantity}</td>
-			<td>${p.description}</td>
-			<td>
-				<button class="btn btn-sm btn-primary me-1">Sửa</button>
-				<button class="btn btn-sm btn-danger btn-delete">Xóa</button>
-			</td>
-		`;
-        tr.querySelector('.btn-delete').addEventListener('click', () => {
-            const i = products.findIndex(x => x.id === p.id);
-            if (i > -1) {
-                products.splice(i, 1);
-                renderTable(products);
-            }
+/* ===== ĐỒNG HỒ ===== */
+function startClock() {
+    function tick() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleString('vi-VN', {
+            weekday: 'long', year: 'numeric', month: '2-digit',
+            day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
-        tbody.appendChild(tr);
+    }
+    tick();
+    setInterval(tick, 1000);
+}
+
+/* ===== FORMAT ===== */
+const formatPrice = (v) => new Intl.NumberFormat('vi-VN').format(v) + ' đ';
+
+function getStatusBadge(status) {
+    if (status === 'Còn hàng') {
+        return `<span class="badge bg-success bg-opacity-25 text-success px-3 py-2 rounded-pill fw-medium border border-success border-opacity-25">Còn hàng</span>`;
+    }
+    return `<span class="badge bg-danger bg-opacity-25 text-danger px-3 py-2 rounded-pill fw-medium border border-danger border-opacity-25">Hết hàng</span>`;
+}
+
+/* ===== RENDER BẢNG ===== */
+function renderTable(products) {
+    const tbody = document.getElementById('productTbody');
+    if (products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Chưa có sản phẩm nào.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = products.map((p, idx) => `
+        <tr class="align-middle">
+            <td class="text-center text-muted">${idx + 1}</td>
+            <td class="fw-medium" style="font-size:0.95rem">${p.name}</td>
+            <td class="text-muted" style="font-size:0.9rem">${p.category}</td>
+            <td class="fw-medium" style="font-size:0.95rem">${formatPrice(p.price)}</td>
+            <td>${getStatusBadge(p.status)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ===== TOAST ===== */
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'flex';
+    setTimeout(() => { toast.classList.add('show'); }, 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.style.display = 'none'; }, 350);
+    }, 3000);
+}
+
+/* ===== VALIDATE GIÁ (chỉ số) ===== */
+function setupPriceInput() {
+    const input = document.getElementById('productPrice');
+    input.addEventListener('input', () => {
+        input.value = input.value.replace(/[^\d.]/g, '').replace(/^(\d*\.?\d*).*$/, '$1');
     });
 }
 
+/* ===== INIT ===== */
 function init() {
     const products = window.PRODUCTS ? [...window.PRODUCTS] : [];
 
+    startClock();
     renderTable(products);
+    setupPriceInput();
 
-    const form = document.getElementById('productForm');
-    form.addEventListener('submit', (e) => {
+    /* Reset form */
+    document.getElementById('btnReset').addEventListener('click', () => {
+        document.getElementById('productForm').reset();
+    });
+
+    /* Submit form */
+    document.getElementById('productForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('productName').value.trim();
-        const price = Number(document.getElementById('productPrice').value) || 0;
-        const qty = Number(document.getElementById('productQty').value) || 0;
-        const desc = document.getElementById('productDesc').value.trim();
+        const name     = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        const price    = document.getElementById('productPrice').value.trim();
+        const status   = document.getElementById('productStatus').value;
+
+        if (!name || !category || !price) {
+            alert('Vui lòng điền đầy đủ Tên, Danh mục và Giá!');
+            return;
+        }
+        if (isNaN(Number(price)) || Number(price) < 0) {
+            alert('Giá phải là một số hợp lệ!');
+            return;
+        }
 
         const newProduct = {
             id: products.length ? Math.max(...products.map(p => p.id)) + 1 : 1,
             name,
-            price,
-            quantity: qty,
-            description: desc,
-            image: ''
+            category,
+            price: Number(price),
+            status
         };
 
         products.push(newProduct);
         renderTable(products);
-
-        const modalEl = document.getElementById('productModal');
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.hide();
-
-        form.reset();
-    });
-
-    const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', (e) => {
-        const q = e.target.value.trim().toLowerCase();
-        if (!q) renderTable(products);
-        else renderTable(products.filter(p => p.name.toLowerCase().includes(q) || String(p.id) === q));
+        document.getElementById('productForm').reset();
+        showToast(`Đã thêm "${name}" thành công!`);
     });
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
