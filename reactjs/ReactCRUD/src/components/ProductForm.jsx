@@ -12,6 +12,7 @@ function ProductForm({ onAddProduct }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'price' && value !== '' && !/^\d*\.?\d*$/.test(value)) return;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -19,6 +20,10 @@ function ProductForm({ onAddProduct }) {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.category) {
       alert("Vui lòng điền đầy đủ Tên, Danh mục và Giá!");
+      return;
+    }
+    if (isNaN(Number(formData.price)) || Number(formData.price) < 0) {
+      alert("Giá phải là một số hợp lệ!");
       return;
     }
     onAddProduct(formData);
@@ -67,12 +72,13 @@ function ProductForm({ onAddProduct }) {
         <div className="mb-3">
           <label className="form-label fw-medium small text-secondary mb-1">Giá</label>
           <input 
-            type="number" 
+            type="text" 
             name="price" 
             className="form-control form-control-sm py-2" 
             placeholder="Nhập giá" 
             value={formData.price} 
             onChange={handleChange} 
+            inputMode="decimal"
           />
         </div>
         

@@ -1,7 +1,6 @@
 import React from 'react';
 
 function ProductRow({ index, product }) {
-  // Format price as VNĐ
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
   };
